@@ -1,0 +1,98 @@
+// Do not remove the include below
+#include "PlutoPilot.h"
+#include "control.h"
+#include "sensor.h"
+#include "althold.h"
+#include "utils.h"
+
+#define k 100
+
+bool isArmed = false;
+
+int16_t X_accl;
+int16_t Y_accl;
+int16_t X_vel;
+int16_t Y_vel;
+int16_t X_pos;
+int16_t Y_pos;
+uint32_t initial_time;
+uint32_t current_time;
+uint32_t delta_t;
+int16_t roll_correction;
+int16_t pitch_correction;
+
+
+//The setup function is called once at Pluto's hardware startup
+void plutoInit()
+{
+// Add your hardware initialization code here
+}
+
+
+
+//The function is called once before plutoPilot when you activate Developer Mode
+void onPilotStart()
+{
+	initial_time = 0;
+}
+
+
+
+// The loop function is called in an endless loop
+void plutoPilot()
+{
+if (!isArmed) 
+{
+	isArmed = Control.arm();
+}
+
+void setRC(RC_THROTTLE,1500);
+void setAltholdHeight(50);
+Althold.activateAlthold(true);
+X_accl = Accelerometer.getX();
+Y_accl = Accelerometer.getY();
+current_time = microsT();
+delta_t = current_time - initial_time;
+initial_time = current_time;
+X_vel += X_accl * delta_t;
+Y_vel += Y_accl * delta_t;
+X_pos += X_vel * delta_t;
+Y_pos += Y_vel * delta_t;
+
+roll_correction = 1500 - k * X_pos;
+pitch_correction = 1500 - k * Y_pos;
+if (roll_correction < 1000)
+{
+	roll_correction = 1000;
+}
+else if (roll_correction > 2000)
+{
+	roll_correction = 2000;
+}
+if (pitch_correction < 1000)
+{
+	pitch_correction = 1000;
+}
+else if (pitch_correction > 2000)
+{
+	pitch_correction = 2000;
+}
+
+while(X_pos != 0 || Y_pos != 0 )
+{
+	setRC(RC_ROLL, roll_correction);
+	setRC(RC_PITCH, pitch_correction);
+}
+
+}
+
+
+
+//The function is called once after plutoPilot when you deactivate Developer Mode
+void onPilotFinish()
+{
+
+// do your cleanup stuffs here
+	isArmed = false;
+
+}
